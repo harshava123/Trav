@@ -11,11 +11,13 @@ function LayoutContent() {
   const hideHeaderFooter = location.pathname === "/";
 
   return (
-    <>
+    <div className="min-h-screen flex flex-col">
       {!hideHeaderFooter && <Header />}
-      <Routers />
+      <main className="flex-1 flex flex-col">
+        <Routers />
+      </main>
       {!hideHeaderFooter && <Footer />}
-    </>
+    </div>
   );
 }
 

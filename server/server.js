@@ -15,6 +15,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 // Routes
+app.use('/api/auth', require('./routes/auth'));
 app.use('/api/bookings', require('./routes/bookings'));
 app.use('/api/loading-sheets', require('./routes/loadingSheets'));
 app.use('/api/deliveries', require('./routes/deliveries'));
@@ -40,7 +41,8 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
-  console.log(`📚 API Documentation:`);
+  console.log(`🔐 Auth: http://localhost:${PORT}/api/auth`);
+  console.log(`📚 API:`);
   console.log(`   - Bookings: http://localhost:${PORT}/api/bookings`);
   console.log(`   - Loading Sheets: http://localhost:${PORT}/api/loading-sheets`);
   console.log(`   - Deliveries: http://localhost:${PORT}/api/deliveries`);
