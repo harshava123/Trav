@@ -5,10 +5,20 @@ export default function Login() {
   const [isLogin, setIsLogin] = useState(true);
   const navigate = useNavigate(); // ✅ initialize navigate
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Optional: basic connectivity check to backend before proceeding
+    try {
+      const res = await fetch("http://localhost:5000/api/health");
+      if (!res.ok) throw new Error("Backend not reachable");
+    } catch (err) {
+      alert("Cannot reach backend (http://localhost:5000). Please start the server with `npm run server` and ensure .env has MONGODB_URI.");
+      return;
+    }
+
     if (isLogin) {
-      // Dummy login success
+      // Dummy login success (replace with real auth later)
       alert("Login successful (dummy)!");
       navigate("/agent"); // ✅ redirect to Agent.jsx
     } else {
