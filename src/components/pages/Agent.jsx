@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -6,6 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 
 export default function Agent() {
   const [activeTab, setActiveTab] = useState("booking");
+  const [agentLocation, setAgentLocation] = useState(""); // Will be fetched from user profile
+  const [loading, setLoading] = useState(true);
 
   // Delivery Dashboard State
   const [lrList, setLrList] = useState([
@@ -111,6 +113,40 @@ export default function Agent() {
     }
   };
 
+  // Fetch agent location from user profile
+  useEffect(() => {
+    const fetchAgentLocation = async () => {
+      try {
+        const token = localStorage.getItem('auth_token');
+        if (!token) {
+          console.error('No auth token found');
+          return;
+        }
+
+        const response = await fetch('http://localhost:5000/api/auth/profile', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.user && data.user.location) {
+            setAgentLocation(data.user.location);
+          }
+        } else {
+          console.error('Failed to fetch user profile');
+        }
+      } catch (error) {
+        console.error('Error fetching agent location:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAgentLocation();
+  }, []);
+
   // Loading Sheet State
   const [loadingData, setLoadingData] = useState({
     bookingBranch: "",
@@ -204,6 +240,32 @@ export default function Agent() {
               <span className="text-sm font-medium text-gray-700">Agent</span>
             </div>
             <p className="text-xs text-gray-500">Welcome back!</p>
+            
+            {/* Fixed Location Display */}
+            <div className="mt-3 pt-3 border-t border-gray-200">
+              {loading ? (
+                <div className="flex items-center gap-2">
+                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+                  <span className="text-xs text-gray-500">Loading location...</span>
+                </div>
+              ) : agentLocation ? (
+                <>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium text-gray-600">📍 Location:</span>
+                    <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                      {agentLocation}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Assigned by Admin
+                  </p>
+                </>
+              ) : (
+                <div className="text-xs text-red-500">
+                  ⚠️ Location not assigned
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Navigation */}
@@ -218,7 +280,7 @@ export default function Agent() {
               { id: "invoice", label: "Invoice", icon: "🧾" },
               { id: "inSearch", label: "In Search", icon: "🔍" }
             ].map((item) => (
-              <button
+          <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
                 className={`w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors ${
@@ -232,8 +294,8 @@ export default function Agent() {
                 <svg className="w-3 h-3 ml-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
-              </button>
-            ))}
+          </button>
+        ))}
           </nav>
         </div>
       </div>
@@ -249,8 +311,25 @@ export default function Agent() {
 
         {/* Section Header */}
         <div className="mb-6 flex items-center justify-between bg-blue-600 text-white p-3 rounded-md">
-          <h2 className="text-base font-semibold">{activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</h2>
-          
+          <div className="flex items-center gap-4">
+            <h2 className="text-base font-semibold">{activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</h2>
+            {loading ? (
+              <div className="flex items-center gap-2 bg-blue-700 px-3 py-1 rounded-full">
+                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+                <span className="text-xs">Loading...</span>
+              </div>
+            ) : agentLocation ? (
+              <div className="flex items-center gap-2 bg-blue-700 px-3 py-1 rounded-full">
+                <span className="text-xs">📍</span>
+                <span className="text-xs font-medium">{agentLocation}</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 bg-red-600 px-3 py-1 rounded-full">
+                <span className="text-xs">⚠️</span>
+                <span className="text-xs font-medium">No Location</span>
+              </div>
+            )}
+          </div>
         </div>
 
                 {/* Tab Content */}
@@ -261,14 +340,14 @@ export default function Agent() {
               <div className="border-b border-gray-200 pb-4">
                 <h3 className="text-sm font-medium text-gray-700 mb-4">Sender & Receiver Details</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
+          <div>
                     <Label className="text-xs font-medium text-gray-600">Sender Company</Label>
                     <Input
-                      type="text"
-                      name="senderCompany"
+                    type="text"
+                    name="senderCompany"
                       placeholder="Enter company name"
-                      value={bookingData.senderCompany}
-                      onChange={handleBookingChange}
+                    value={bookingData.senderCompany}
+                    onChange={handleBookingChange}
                       className="h-8 text-sm mt-1"
                       required
                     />
@@ -288,11 +367,11 @@ export default function Agent() {
                   <div>
                     <Label className="text-xs font-medium text-gray-600">Sender Mobile</Label>
                     <Input
-                      type="text"
-                      name="senderMobile"
+                    type="text"
+                    name="senderMobile"
                       placeholder="Enter mobile number"
-                      value={bookingData.senderMobile}
-                      onChange={handleBookingChange}
+                    value={bookingData.senderMobile}
+                    onChange={handleBookingChange}
                       className="h-8 text-sm mt-1"
                       required
                     />
@@ -312,24 +391,24 @@ export default function Agent() {
                   <div>
                     <Label className="text-xs font-medium text-gray-600">Sender GST</Label>
                     <Input
-                      type="text"
-                      name="senderGST"
+                    type="text"
+                    name="senderGST"
                       placeholder="Enter GST number"
-                      value={bookingData.senderGST}
-                      onChange={handleBookingChange}
+                    value={bookingData.senderGST}
+                    onChange={handleBookingChange}
                       className="h-8 text-sm mt-1"
-                    />
-                  </div>
-                  <div>
+                  />
+                </div>
+                <div>
                     <Label className="text-xs font-medium text-gray-600">Receiver GST</Label>
                     <Input
-                      type="text"
-                      name="receiverGST"
+                    type="text"
+                    name="receiverGST"
                       placeholder="Enter GST number"
-                      value={bookingData.receiverGST}
-                      onChange={handleBookingChange}
+                    value={bookingData.receiverGST}
+                    onChange={handleBookingChange}
                       className="h-8 text-sm mt-1"
-                    />
+                  />
                   </div>
                 </div>
               </div>
@@ -341,38 +420,38 @@ export default function Agent() {
                   <div>
                     <Label className="text-xs font-medium text-gray-600">Material</Label>
                     <Input
-                      type="text"
-                      name="material"
+                  type="text"
+                  name="material"
                       placeholder="Enter material description"
-                      value={bookingData.material}
-                      onChange={handleBookingChange}
+                  value={bookingData.material}
+                  onChange={handleBookingChange}
                       className="h-8 text-sm mt-1"
                       required
-                    />
+                />
                   </div>
                   <div>
                     <Label className="text-xs font-medium text-gray-600">Quantity</Label>
                     <Input
-                      type="number"
-                      name="qty"
+                  type="number"
+                  name="qty"
                       placeholder="Enter quantity"
-                      value={bookingData.qty}
-                      onChange={handleBookingChange}
+                  value={bookingData.qty}
+                  onChange={handleBookingChange}
                       className="h-8 text-sm mt-1"
                       required
-                    />
+                />
                   </div>
                   <div>
                     <Label className="text-xs font-medium text-gray-600">Weight</Label>
                     <Input
-                      type="number"
-                      name="weight"
+                  type="number"
+                  name="weight"
                       placeholder="Enter weight"
-                      value={bookingData.weight}
-                      onChange={handleBookingChange}
+                  value={bookingData.weight}
+                  onChange={handleBookingChange}
                       className="h-8 text-sm mt-1"
                       required
-                    />
+                />
                   </div>
                 </div>
               </div>
@@ -384,23 +463,23 @@ export default function Agent() {
                   <div>
                     <Label className="text-xs font-medium text-gray-600">Freight</Label>
                     <Input
-                      type="number"
-                      name="freight"
+                  type="number"
+                  name="freight"
                       placeholder="Enter freight amount"
-                      value={bookingData.freight}
-                      onChange={handleBookingChange}
+                  value={bookingData.freight}
+                  onChange={handleBookingChange}
                       className="h-8 text-sm mt-1"
                       required
-                    />
+                />
                   </div>
                   <div>
                     <Label className="text-xs font-medium text-gray-600">Invoice Number</Label>
                     <Input
-                      type="text"
-                      name="invoice"
+                  type="text"
+                  name="invoice"
                       placeholder="Enter invoice number"
-                      value={bookingData.invoice}
-                      onChange={handleBookingChange}
+                  value={bookingData.invoice}
+                  onChange={handleBookingChange}
                       className="h-8 text-sm mt-1"
                       required
                     />
@@ -415,16 +494,16 @@ export default function Agent() {
                       onChange={handleBookingChange}
                       className="h-8 text-sm mt-1"
                       required
-                    />
-                  </div>
+                />
+              </div>
                   <div>
                     <Label className="text-xs font-medium text-gray-600">Goods Condition</Label>
                     <Input
-                      type="text"
-                      name="goodsCondition"
+                  type="text"
+                  name="goodsCondition"
                       placeholder="Enter goods condition"
-                      value={bookingData.goodsCondition}
-                      onChange={handleBookingChange}
+                  value={bookingData.goodsCondition}
+                  onChange={handleBookingChange}
                       className="h-8 text-sm mt-1"
                     />
                   </div>
@@ -438,68 +517,68 @@ export default function Agent() {
                   <div>
                     <Label className="text-xs font-medium text-gray-600">LR Charge</Label>
                     <Input
-                      type="number"
-                      name="lrCharge"
+                  type="number"
+                  name="lrCharge"
                       placeholder="Enter LR charge"
-                      value={bookingData.lrCharge}
-                      onChange={handleBookingChange}
+                  value={bookingData.lrCharge}
+                  onChange={handleBookingChange}
                       className="h-8 text-sm mt-1"
-                    />
+                />
                   </div>
                   <div>
                     <Label className="text-xs font-medium text-gray-600">Handling</Label>
                     <Input
-                      type="number"
-                      name="handling"
+                  type="number"
+                  name="handling"
                       placeholder="Enter handling charge"
-                      value={bookingData.handling}
-                      onChange={handleBookingChange}
+                  value={bookingData.handling}
+                  onChange={handleBookingChange}
                       className="h-8 text-sm mt-1"
-                    />
+                />
                   </div>
                   <div>
                     <Label className="text-xs font-medium text-gray-600">Pickup</Label>
                     <Input
-                      type="number"
-                      name="pickup"
+                  type="number"
+                  name="pickup"
                       placeholder="Enter pickup charge"
-                      value={bookingData.pickup}
-                      onChange={handleBookingChange}
+                  value={bookingData.pickup}
+                  onChange={handleBookingChange}
                       className="h-8 text-sm mt-1"
-                    />
+                />
                   </div>
                   <div>
                     <Label className="text-xs font-medium text-gray-600">Door Delivery</Label>
                     <Input
-                      type="number"
-                      name="doorDelivery"
+                  type="number"
+                  name="doorDelivery"
                       placeholder="Enter door delivery charge"
-                      value={bookingData.doorDelivery}
-                      onChange={handleBookingChange}
+                  value={bookingData.doorDelivery}
+                  onChange={handleBookingChange}
                       className="h-8 text-sm mt-1"
-                    />
+                />
                   </div>
                   <div>
                     <Label className="text-xs font-medium text-gray-600">Others</Label>
                     <Input
-                      type="number"
-                      name="others"
+                  type="number"
+                  name="others"
                       placeholder="Enter other charges"
-                      value={bookingData.others}
-                      onChange={handleBookingChange}
+                  value={bookingData.others}
+                  onChange={handleBookingChange}
                       className="h-8 text-sm mt-1"
-                    />
+                />
                   </div>
                   <div>
                     <Label className="text-xs font-medium text-gray-600">Total</Label>
                     <Input
-                      type="number"
-                      name="total"
+                  type="number"
+                  name="total"
                       placeholder="Enter total amount"
-                      value={bookingData.total}
-                      onChange={handleBookingChange}
+                  value={bookingData.total}
+                  onChange={handleBookingChange}
                       className="h-8 text-sm mt-1 font-bold"
-                    />
+                />
                   </div>
                 </div>
               </div>
@@ -507,9 +586,9 @@ export default function Agent() {
               {/* Submit Button */}
               <div className="flex justify-end pt-4">
                 <Button 
-                  type="submit" 
+                type="submit"
                   className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 text-sm"
-                >
+              >
                   CONFIRM BOOKING
                 </Button>
               </div>
@@ -520,198 +599,206 @@ export default function Agent() {
         {/* Loading Sheet Tab */}
         {activeTab === "loading" && (
           <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <h3 className="text-lg font-medium text-gray-800 mb-4">Loading Sheet</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-medium text-gray-800">Loading Sheet</h3>
+              {agentLocation && (
+                <div className="text-sm text-gray-600">
+                  📍 Location: <span className="font-medium text-blue-600">{agentLocation}</span>
+                </div>
+              )}
+            </div>
+            
             <form onSubmit={handleLoadingSubmit} className="space-y-6">
-              {/* Branch & Vehicle */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-xs font-medium text-gray-600">Booking Branch</Label>
-                  <Input
-                    type="text"
-                    name="bookingBranch"
-                    placeholder="Select Booking Branch"
-                    value={loadingData.bookingBranch}
-                    onChange={handleLoadingChange}
-                    className="h-8 text-sm mt-1"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs font-medium text-gray-600">Delivery Branch</Label>
-                  <Input
-                    type="text"
-                    name="deliveryBranch"
-                    placeholder="Select Delivery Branch"
-                    value={loadingData.deliveryBranch}
-                    onChange={handleLoadingChange}
-                    className="h-8 text-sm mt-1"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs font-medium text-gray-600">Vehicle Number</Label>
-                  <Input
-                    type="text"
-                    name="vehicleNumber"
-                    placeholder="Vehicle Number"
-                    value={loadingData.vehicleNumber}
-                    onChange={handleLoadingChange}
-                    className="h-8 text-sm mt-1"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs font-medium text-gray-600">Driver Name</Label>
-                  <Input
-                    type="text"
-                    name="driverName"
-                    placeholder="Driver Name"
-                    value={loadingData.driverName}
-                    onChange={handleLoadingChange}
-                    className="h-8 text-sm mt-1"
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <Label className="text-xs font-medium text-gray-600">Driver Mobile</Label>
-                  <Input
-                    type="text"
-                    name="driverMobile"
-                    placeholder="Driver Mobile"
-                    value={loadingData.driverMobile}
-                    onChange={handleLoadingChange}
-                    className="h-8 text-sm mt-1"
-                  />
-                </div>
+                {/* Branch & Vehicle */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+                    <Label className="text-xs font-medium text-gray-600">Booking Branch</Label>
+                    <Input
+                  type="text"
+                  name="bookingBranch"
+                  placeholder="Select Booking Branch"
+                  value={loadingData.bookingBranch}
+                  onChange={handleLoadingChange}
+                      className="h-8 text-sm mt-1"
+                />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-medium text-gray-600">Delivery Branch</Label>
+                    <Input
+                  type="text"
+                  name="deliveryBranch"
+                  placeholder="Select Delivery Branch"
+                  value={loadingData.deliveryBranch}
+                  onChange={handleLoadingChange}
+                      className="h-8 text-sm mt-1"
+                />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-medium text-gray-600">Vehicle Number</Label>
+                    <Input
+                  type="text"
+                  name="vehicleNumber"
+                  placeholder="Vehicle Number"
+                  value={loadingData.vehicleNumber}
+                  onChange={handleLoadingChange}
+                      className="h-8 text-sm mt-1"
+                />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-medium text-gray-600">Driver Name</Label>
+                    <Input
+                  type="text"
+                  name="driverName"
+                  placeholder="Driver Name"
+                  value={loadingData.driverName}
+                  onChange={handleLoadingChange}
+                      className="h-8 text-sm mt-1"
+                />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label className="text-xs font-medium text-gray-600">Driver Mobile</Label>
+                    <Input
+                  type="text"
+                  name="driverMobile"
+                  placeholder="Driver Mobile"
+                  value={loadingData.driverMobile}
+                  onChange={handleLoadingChange}
+                      className="h-8 text-sm mt-1"
+                />
+                  </div>
               </div>
 
               {/* LR Rows */}
               <div>
-                <h4 className="text-sm font-medium text-gray-700 mb-3">Loaded LRs</h4>
+                  <h4 className="text-sm font-medium text-gray-700 mb-3">Loaded LRs</h4>
                 {loadingData.lrRows.map((row, index) => (
-                  <div key={index} className="grid grid-cols-7 gap-2 mb-2 border-b pb-2">
-                    <Input
+                    <div key={index} className="grid grid-cols-7 gap-2 mb-2 border-b pb-2">
+                      <Input
                       type="text"
                       name="lrNo"
                       placeholder="LR No"
                       value={row.lrNo}
                       onChange={(e) => handleLRRowChange(index, e)}
-                      className="h-8 text-xs"
+                        className="h-8 text-xs"
                     />
-                    <Input
+                      <Input
                       type="date"
                       name="bDate"
                       value={row.bDate}
                       onChange={(e) => handleLRRowChange(index, e)}
-                      className="h-8 text-xs"
+                        className="h-8 text-xs"
                     />
                     <select
                       name="payment"
                       value={row.payment}
                       onChange={(e) => handleLRRowChange(index, e)}
-                      className="h-8 text-xs border border-gray-300 rounded px-2"
+                        className="h-8 text-xs border border-gray-300 rounded px-2"
                     >
                       <option value="TOPAY">TOPAY</option>
                       <option value="PAID">PAID</option>
                       <option value="ON ACC">ON ACC</option>
                     </select>
-                    <Input
+                      <Input
                       type="text"
                       name="sender"
                       placeholder="Sender"
                       value={row.sender}
                       onChange={(e) => handleLRRowChange(index, e)}
-                      className="h-8 text-xs"
+                        className="h-8 text-xs"
                     />
-                    <Input
+                      <Input
                       type="text"
                       name="receiver"
                       placeholder="Receiver"
                       value={row.receiver}
                       onChange={(e) => handleLRRowChange(index, e)}
-                      className="h-8 text-xs"
+                        className="h-8 text-xs"
                     />
-                    <Input
+                      <Input
                       type="number"
                       name="articles"
                       placeholder="Articles"
                       value={row.articles}
                       onChange={(e) => handleLRRowChange(index, e)}
-                      className="h-8 text-xs"
+                        className="h-8 text-xs"
                     />
-                    <Input
+                      <Input
                       type="number"
                       name="freight"
                       placeholder="Freight"
                       value={row.freight}
                       onChange={(e) => handleLRRowChange(index, e)}
-                      className="h-8 text-xs"
+                        className="h-8 text-xs"
                     />
                   </div>
                 ))}
-                <Button
+                  <Button
                   type="button"
                   onClick={addLRRow}
-                  variant="outline"
-                  className="h-8 px-3 text-xs"
+                    variant="outline"
+                    className="h-8 px-3 text-xs"
                 >
                   + Add LR
-                </Button>
+                  </Button>
               </div>
 
               {/* Totals */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-xs font-medium text-gray-600">Total Freight</Label>
-                  <Input
-                    type="number"
-                    name="totalFreight"
-                    placeholder="Total Freight"
-                    value={loadingData.totalFreight}
-                    onChange={handleLoadingChange}
-                    className="h-8 text-sm mt-1"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs font-medium text-gray-600">Door Delivery</Label>
-                  <Input
-                    type="number"
-                    name="doorDelivery"
-                    placeholder="Door Delivery"
-                    value={loadingData.doorDelivery}
-                    onChange={handleLoadingChange}
-                    className="h-8 text-sm mt-1"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs font-medium text-gray-600">Pickup</Label>
-                  <Input
-                    type="number"
-                    name="pickup"
-                    placeholder="Pickup"
-                    value={loadingData.pickup}
-                    onChange={handleLoadingChange}
-                    className="h-8 text-sm mt-1"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs font-medium text-gray-600">Handling Charges</Label>
-                  <Input
-                    type="number"
-                    name="handling"
-                    placeholder="Handling Charges"
-                    value={loadingData.handling}
-                    onChange={handleLoadingChange}
-                    className="h-8 text-sm mt-1"
-                  />
-                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-xs font-medium text-gray-600">Total Freight</Label>
+                    <Input
+                  type="number"
+                  name="totalFreight"
+                  placeholder="Total Freight"
+                  value={loadingData.totalFreight}
+                  onChange={handleLoadingChange}
+                      className="h-8 text-sm mt-1"
+                />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-medium text-gray-600">Door Delivery</Label>
+                    <Input
+                  type="number"
+                  name="doorDelivery"
+                  placeholder="Door Delivery"
+                  value={loadingData.doorDelivery}
+                  onChange={handleLoadingChange}
+                      className="h-8 text-sm mt-1"
+                />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-medium text-gray-600">Pickup</Label>
+                    <Input
+                  type="number"
+                  name="pickup"
+                  placeholder="Pickup"
+                  value={loadingData.pickup}
+                  onChange={handleLoadingChange}
+                      className="h-8 text-sm mt-1"
+                />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-medium text-gray-600">Handling Charges</Label>
+                    <Input
+                  type="number"
+                  name="handling"
+                  placeholder="Handling Charges"
+                  value={loadingData.handling}
+                  onChange={handleLoadingChange}
+                      className="h-8 text-sm mt-1"
+                />
+                  </div>
               </div>
 
               {/* Submit */}
-              <div className="flex justify-end">
-                <Button
-                  type="submit"
-                  className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 text-sm"
-                >
-                  Confirm Load Sheet
-                </Button>
-              </div>
+                <div className="flex justify-end">
+                  <Button
+                type="submit"
+                    className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 text-sm"
+              >
+                Confirm Load Sheet
+                  </Button>
+                </div>
             </form>
           </div>
         )}
@@ -727,7 +814,7 @@ export default function Agent() {
             </div>
             
             <div className="text-center mb-6">
-              <h4 className="text-sm font-medium text-gray-700">ALL LRS RECEIVED FROM KTD</h4>
+              <h4 className="text-sm font-medium text-gray-700">ALL LRS RECEIVED FROM KTD - {agentLocation.toUpperCase()}</h4>
             </div>
 
             <div className="overflow-x-auto">
@@ -897,7 +984,7 @@ export default function Agent() {
                   />
                 </div>
                 
-                <div>
+          <div>
                   <Label className="text-xs font-medium text-gray-600">Date</Label>
                   <Input
                     type="date"
@@ -942,7 +1029,7 @@ export default function Agent() {
                     </select>
                   </div>
                   
-                  <div>
+          <div>
                     <Label className="text-xs font-medium text-gray-600">Search Value</Label>
                     <Input
                       type="text"

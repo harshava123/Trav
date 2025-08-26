@@ -55,7 +55,13 @@ export default function Login() {
       localStorage.setItem("auth_user", JSON.stringify(data.user));
 
       alert(isLogin ? "Login successful" : "Registered successfully");
-      navigate("/agent");
+      
+      // Check if user is admin and redirect accordingly
+      if (data.user.role === "admin") {
+        navigate("/admin");
+      } else {
+        navigate("/agent");
+      }
     } catch (err) {
       alert(err.message || "Authentication error");
     } finally {

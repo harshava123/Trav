@@ -42,6 +42,9 @@ app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
   console.log(`🔐 Auth: http://localhost:${PORT}/api/auth`);
+  console.log(`   - Login: http://localhost:${PORT}/api/auth/login`);
+  console.log(`   - Register: http://localhost:${PORT}/api/auth/register`);
+  console.log(`   - Check Admin: http://localhost:${PORT}/api/auth/check-admin`);
   console.log(`📚 API:`);
   console.log(`   - Bookings: http://localhost:${PORT}/api/bookings`);
   console.log(`   - Loading Sheets: http://localhost:${PORT}/api/loading-sheets`);
