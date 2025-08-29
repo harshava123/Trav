@@ -1,104 +1,54 @@
 #!/bin/bash
 
-echo "🚀 Starting deployment process for Trav Logistics Application..."
+echo "🚀 Trav Application Deployment Script"
+echo "====================================="
+echo ""
 
-# Check if git is installed
-if ! command -v git &> /dev/null; then
-    echo "❌ Git is not installed. Please install Git first."
+# Check if git is initialized
+if [ ! -d ".git" ]; then
+    echo "❌ Git repository not found!"
+    echo "Please initialize git and push your code to GitHub/GitLab first."
     exit 1
 fi
 
-# Check if node is installed
-if ! command -v node &> /dev/null; then
-    echo "❌ Node.js is not installed. Please install Node.js first."
+# Check if files exist
+if [ ! -f "server/package.json" ]; then
+    echo "❌ Backend package.json not found!"
     exit 1
 fi
 
-# Check if npm is installed
-if ! command -v npm &> /dev/null; then
-    echo "❌ npm is not installed. Please install npm first."
+if [ ! -f "package.json" ]; then
+    echo "❌ Frontend package.json not found!"
     exit 1
 fi
 
-echo "✅ Prerequisites check passed!"
-
-# Check git status
-echo "📋 Checking git status..."
-if [[ -n $(git status --porcelain) ]]; then
-    echo "⚠️  You have uncommitted changes. Please commit them first:"
-    git status
-    echo ""
-    read -p "Do you want to commit all changes? (y/n): " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        git add .
-        git commit -m "Prepare for deployment - $(date)"
-        echo "✅ Changes committed!"
-    else
-        echo "❌ Please commit your changes before deploying."
-        exit 1
-    fi
-fi
-
-# Install dependencies
-echo "📦 Installing dependencies..."
-npm install
-cd server && npm install && cd ..
-
-# Build frontend
-echo "🔨 Building frontend..."
-npm run build
-
-if [ $? -eq 0 ]; then
-    echo "✅ Frontend built successfully!"
-else
-    echo "❌ Frontend build failed!"
-    exit 1
-fi
-
-# Test backend
-echo "🧪 Testing backend..."
-cd server
-npm start &
-BACKEND_PID=$!
-
-# Wait for backend to start
-sleep 5
-
-# Test health endpoint
-HEALTH_CHECK=$(curl -s http://localhost:5000/api/health)
-if [[ $HEALTH_CHECK == *"Server is running"* ]]; then
-    echo "✅ Backend is running and healthy!"
-else
-    echo "❌ Backend health check failed!"
-    kill $BACKEND_PID
-    exit 1
-fi
-
-# Stop backend
-kill $BACKEND_PID
-cd ..
-
+echo "✅ Project structure looks good!"
 echo ""
-echo "🎉 Deployment preparation completed!"
+
+echo "📋 Next Steps:"
+echo "1. Push your code to GitHub/GitLab if you haven't already"
+echo "2. Go to https://dashboard.render.com"
+echo "3. Follow the deployment guide in DEPLOYMENT.md"
 echo ""
-echo "📋 Next steps:"
-echo "1. Set up MongoDB Atlas database"
-echo "2. Deploy backend to Railway:"
-echo "   - Go to https://railway.app"
-echo "   - Connect your GitHub repo"
-echo "   - Set root directory to 'server/'"
-echo "   - Add environment variables (see DEPLOYMENT.md)"
+
+echo "🔧 Quick Commands:"
+echo "git add ."
+echo "git commit -m 'Prepare for deployment'"
+echo "git push origin main"
 echo ""
-echo "3. Deploy frontend to Vercel:"
-echo "   - Go to https://vercel.com"
-echo "   - Connect your GitHub repo"
-echo "   - Set build command: npm run build"
-echo "   - Set output directory: dist"
+
+echo "📚 For detailed instructions, see DEPLOYMENT.md"
 echo ""
-echo "📚 See DEPLOYMENT.md for detailed instructions"
+
+echo "🎯 Deployment Checklist:"
+echo "□ MongoDB Atlas cluster created"
+echo "□ MongoDB connection string ready"
+echo "□ Code pushed to Git repository"
+echo "□ Render account created"
+echo "□ Backend service deployed"
+echo "□ Frontend service deployed"
+echo "□ CORS origin updated"
+echo "□ Application tested"
 echo ""
-echo "🔗 Useful links:"
-echo "- MongoDB Atlas: https://www.mongodb.com/atlas"
-echo "- Railway: https://railway.app"
-echo "- Vercel: https://vercel.com"
+
+echo "�� Happy Deploying!"

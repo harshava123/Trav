@@ -12,6 +12,14 @@ dist
 dist-ssr
 *.local
 
+# Environment files
+.env
+.env.local
+.env.production
+.env.development
+server/.env
+server/.env.*
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -22,3 +30,12 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Deployment files (optional - you might want to keep these)
+# render.yaml
+# server/render.yaml

@@ -9,11 +9,17 @@ const app = express();
 // Connect to database
 connectDB();
 
+// CORS configuration for production
+const corsOptions = {
+  origin: process.env.NODE_ENV === 'production' 
+    ? [process.env.CORS_ORIGIN || 'https://trav-frontend.onrender.com']
+    : ['http://localhost:3000', 'http://localhost:5173'],
+  credentials: true,
+  optionsSuccessStatus: 200
+};
+
 // Middleware
-app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
-  credentials: true
-}));
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
@@ -25,7 +31,11 @@ app.use('/api/deliveries', require('./routes/deliveries'));
 
 // Health check route
 app.get('/api/health', (req, res) => {
-  res.json({ message: 'Server is running', timestamp: new Date().toISOString() });
+  res.json({ 
+    message: 'Server is running', 
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
+  });
 });
 
 // Error handling middleware
@@ -43,6 +53,7 @@ const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
   console.log(`🔐 Auth: http://localhost:${PORT}/api/auth`);
   console.log(`   - Login: http://localhost:${PORT}/api/auth/login`);
