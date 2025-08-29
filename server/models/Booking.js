@@ -1,6 +1,11 @@
 const mongoose = require('mongoose');
 
 const bookingSchema = new mongoose.Schema({
+  lrNumber: { type: String, required: true, unique: true },
+  agentName: { type: String, required: true },
+  fromLocation: { type: String, required: true },
+  toLocation: { type: String, required: true },
+  status: { type: String, default: 'pending', enum: ['pending', 'confirmed', 'delivered', 'cancelled'] },
   senderCompany: { type: String, required: true },
   senderMobile: { type: String, required: true },
   senderGST: { type: String, required: true },

@@ -1,8 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import Sidebar from "@/components/layout/Sidebar";
+import { Package, FileText, Calendar, Truck, BarChart3, Search, MapPin, AlertTriangle } from "lucide-react";
 
 export default function Agent() {
   const [activeTab, setActiveTab] = useState("booking");
@@ -16,6 +18,15 @@ export default function Agent() {
     { id: 3, lrNo: "LR003", status: "pending", vehicleNumber: "TN01BT3543", deliveryPerson: "" }
   ]);
 
+  // Generate next LR number using state to ensure proper updates
+  const [lrCounter, setLrCounter] = useState(1000); // Will be updated based on database
+  
+  const generateLRNumber = useCallback(() => {
+    const nextLR = lrCounter;
+    setLrCounter(prev => prev + 1);
+    return `LR${nextLR}`;
+  }, [lrCounter]);
+  
   const handleDeliveryUpdate = (lrId, field, value) => {
     setLrList(prev => prev.map(lr => 
       lr.id === lrId ? { ...lr, [field]: value } : lr
@@ -42,6 +53,7 @@ export default function Agent() {
 
   // Booking Form State
   const [bookingData, setBookingData] = useState({
+    lrNumber: "",
     senderCompany: "",
     senderMobile: "",
     senderGST: "",
@@ -61,7 +73,82 @@ export default function Agent() {
     doorDelivery: "",
     others: "",
     total: "",
+    toLocation: "",
   });
+
+  // Use ref to track if initial LR has been set
+  const initialLRSet = useRef(false);
+  
+  // Fetch the highest LR number from database and set counter
+  const fetchHighestLRNumber = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/bookings');
+      if (response.ok) {
+        const bookings = await response.json();
+        if (bookings.length > 0) {
+          // Extract numbers from LR numbers (LR1000 -> 1000)
+          const lrNumbers = bookings
+            .map(booking => booking.lrNumber)
+            .filter(lr => lr && lr.startsWith('LR'))
+            .map(lr => parseInt(lr.replace('LR', '')))
+            .filter(num => !isNaN(num));
+          
+          if (lrNumbers.length > 0) {
+            const highestLR = Math.max(...lrNumbers);
+            setLrCounter(highestLR + 1); // Start from next number
+          } else {
+            setLrCounter(1000); // Default if no valid LR numbers found
+          }
+        } else {
+          setLrCounter(1000); // Default if no bookings exist
+        }
+      } else {
+        setLrCounter(1000); // Fallback to default
+      }
+    } catch {
+      setLrCounter(1000); // Fallback to default
+    }
+  };
+  
+  // Set initial LR number when component mounts (only once)
+  useEffect(() => {
+    if (!initialLRSet.current) {
+      // First fetch the highest LR number, then set the initial LR
+      fetchHighestLRNumber().then(() => {
+        // This will trigger another useEffect when lrCounter changes
+      });
+    }
+  }, []);
+  
+  // Set initial LR number when lrCounter is updated
+  useEffect(() => {
+    if (lrCounter > 1000 && !initialLRSet.current) {
+      const initialLR = `LR${lrCounter}`;
+      setBookingData(prev => ({
+        ...prev,
+        lrNumber: initialLR
+      }));
+      initialLRSet.current = true;
+    }
+  }, [lrCounter]);
+
+
+
+  // Calculate total of additional charges only (memoized to prevent infinite re-renders)
+  const currentTotal = useMemo(() => {
+    const lrCharge = parseFloat(bookingData.lrCharge) || 0;
+    const handling = parseFloat(bookingData.handling) || 0;
+    const pickup = parseFloat(bookingData.pickup) || 0;
+    const doorDelivery = parseFloat(bookingData.doorDelivery) || 0;
+    const others = parseFloat(bookingData.others) || 0;
+    
+    // Calculate total of additional charges only
+    const total = lrCharge + handling + pickup + doorDelivery + others;
+    
+    return total.toFixed(2);
+  }, [bookingData.lrCharge, bookingData.handling, bookingData.pickup, bookingData.doorDelivery, bookingData.others]);
+  
+
 
   const handleBookingChange = (e) => {
     setBookingData({ ...bookingData, [e.target.name]: e.target.value });
@@ -69,21 +156,41 @@ export default function Agent() {
 
   const handleBookingSubmit = async (e) => {
     e.preventDefault();
+    
+    // Get current user info
+    const authUser = localStorage.getItem("auth_user");
+    const user = authUser ? JSON.parse(authUser) : null;
+    
+    // Prepare booking data with agent info and calculated total
+    const bookingDataWithAgent = {
+      ...bookingData,
+      lrNumber: bookingData.lrNumber, // Ensure LR number is included
+      total: currentTotal, // Use calculated total
+      agentName: user?.name || "Unknown Agent",
+      fromLocation: agentLocation,
+      toLocation: bookingData.toLocation,
+      status: "pending",
+      createdAt: new Date().toISOString()
+    };
+    
     try {
       const response = await fetch('http://localhost:5000/api/bookings', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(bookingData),
+        body: JSON.stringify(bookingDataWithAgent),
       });
       
       if (response.ok) {
         const result = await response.json();
         console.log('Booking saved:', result);
         alert('Booking confirmed and saved!');
-        // Reset form
-        setBookingData({
+        // Reset form and generate new LR number
+        const newLRNumber = generateLRNumber();
+        
+        const resetData = {
+          lrNumber: newLRNumber,
           senderCompany: "",
           senderMobile: "",
           senderGST: "",
@@ -103,7 +210,10 @@ export default function Agent() {
           doorDelivery: "",
           others: "",
           total: "",
-        });
+          toLocation: "",
+        };
+        
+        setBookingData(resetData);
       } else {
         alert('Error saving booking');
       }
@@ -226,79 +336,8 @@ export default function Agent() {
 
   return (
     <div className="min-h-screen flex bg-gray-50">
-      {/* Sidebar */}
-      <div className="w-64 bg-white border-r border-gray-200 shadow-sm">
-        <div className="p-4">
-          {/* User Info */}
-          <div className="mb-6 p-3 bg-gray-50 rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-              </div>
-              <span className="text-sm font-medium text-gray-700">Agent</span>
-            </div>
-            <p className="text-xs text-gray-500">Welcome back!</p>
-            
-            {/* Fixed Location Display */}
-            <div className="mt-3 pt-3 border-t border-gray-200">
-              {loading ? (
-                <div className="flex items-center gap-2">
-                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
-                  <span className="text-xs text-gray-500">Loading location...</span>
-                </div>
-              ) : agentLocation ? (
-                <>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-gray-600">📍 Location:</span>
-                    <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-1 rounded">
-                      {agentLocation}
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Assigned by Admin
-                  </p>
-                </>
-              ) : (
-                <div className="text-xs text-red-500">
-                  ⚠️ Location not assigned
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Navigation */}
-          <nav className="space-y-1">
-            {[
-              { id: "booking", label: "Booking", icon: "📋" },
-              { id: "loading", label: "Loading", icon: "🚛" },
-              { id: "upcoming", label: "Upcoming", icon: "📅" },
-              { id: "delivery", label: "Delivery", icon: "📦" },
-              { id: "reports", label: "Reports", icon: "📊" },
-              { id: "abstractDailyBooking", label: "Abstract Daily Booking", icon: "📈" },
-              { id: "invoice", label: "Invoice", icon: "🧾" },
-              { id: "inSearch", label: "In Search", icon: "🔍" }
-            ].map((item) => (
-          <button
-                key={item.id}
-                onClick={() => setActiveTab(item.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors ${
-                  activeTab === item.id
-                    ? "bg-blue-50 text-blue-700 border-r-2 border-blue-500"
-                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                }`}
-              >
-                <span className="text-base">{item.icon}</span>
-                <span className="font-medium">{item.label}</span>
-                <svg className="w-3 h-3 ml-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-          </button>
-        ))}
-          </nav>
-        </div>
-      </div>
+      {/* Unified Sidebar */}
+      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} userRole="agent" />
 
       {/* Main Content */}
       <div className="flex-1 p-6">
@@ -320,27 +359,69 @@ export default function Agent() {
               </div>
             ) : agentLocation ? (
               <div className="flex items-center gap-2 bg-blue-700 px-3 py-1 rounded-full">
-                <span className="text-xs">📍</span>
+                <MapPin className="w-3 h-3" />
                 <span className="text-xs font-medium">{agentLocation}</span>
               </div>
             ) : (
               <div className="flex items-center gap-2 bg-red-600 px-3 py-1 rounded-full">
-                <span className="text-xs">⚠️</span>
+                <AlertTriangle className="w-3 h-3" />
                 <span className="text-xs font-medium">No Location</span>
               </div>
             )}
           </div>
+
+          {/* TO Location Selector */}
+          {agentLocation && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium">TO:</span>
+              <select 
+                className="bg-blue-700 text-white text-xs px-2 py-1 rounded border-0 focus:ring-0 focus:outline-none"
+                value={bookingData.toLocation || ""}
+                onChange={(e) => setBookingData({...bookingData, toLocation: e.target.value})}
+              >
+                <option value="">Select Destination</option>
+                <option value="HYDERABAD">HYDERABAD</option>
+                <option value="CHENNAI">CHENNAI</option>
+                <option value="BANGALORE">BANGALORE</option>
+                <option value="MUMBAI">MUMBAI</option>
+                <option value="DELHI">DELHI</option>
+                <option value="KOLKATA">KOLKATA</option>
+                <option value="PUNE">PUNE</option>
+                <option value="AHMEDABAD">AHMEDABAD</option>
+                <option value="JAIPUR">JAIPUR</option>
+                <option value="LUCKNOW">LUCKNOW</option>
+              </select>
+            </div>
+          )}
         </div>
 
                 {/* Tab Content */}
         {activeTab === "booking" && (
           <div className="bg-white rounded-lg border border-gray-200 p-6">
             <form onSubmit={handleBookingSubmit} className="space-y-6">
+              {/* LR Number Section */}
+              <div className="border-b border-gray-200 pb-4">
+                <h3 className="text-sm font-medium text-gray-700 mb-4">LR Details</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-xs font-medium text-gray-600">LR Number</Label>
+                    <Input
+                      type="text"
+                      name="lrNumber"
+                      value={bookingData.lrNumber}
+                      className="h-8 text-sm mt-1 bg-gray-100"
+                      readOnly
+                    />
+
+                  </div>
+                </div>
+              </div>
+
               {/* Sender and Receiver Section */}
               <div className="border-b border-gray-200 pb-4">
                 <h3 className="text-sm font-medium text-gray-700 mb-4">Sender & Receiver Details</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
+                  <div>
                     <Label className="text-xs font-medium text-gray-600">Sender Company</Label>
                     <Input
                     type="text"
@@ -517,68 +598,68 @@ export default function Agent() {
                   <div>
                     <Label className="text-xs font-medium text-gray-600">LR Charge</Label>
                     <Input
-                  type="number"
-                  name="lrCharge"
+                      type="number"
+                      name="lrCharge"
                       placeholder="Enter LR charge"
-                  value={bookingData.lrCharge}
-                  onChange={handleBookingChange}
+                      value={bookingData.lrCharge}
+                      onChange={handleBookingChange}
                       className="h-8 text-sm mt-1"
-                />
+                    />
                   </div>
                   <div>
                     <Label className="text-xs font-medium text-gray-600">Handling</Label>
                     <Input
-                  type="number"
-                  name="handling"
+                      type="number"
+                      name="handling"
                       placeholder="Enter handling charge"
-                  value={bookingData.handling}
-                  onChange={handleBookingChange}
+                      value={bookingData.handling}
+                      onChange={handleBookingChange}
                       className="h-8 text-sm mt-1"
-                />
+                    />
                   </div>
                   <div>
                     <Label className="text-xs font-medium text-gray-600">Pickup</Label>
                     <Input
-                  type="number"
-                  name="pickup"
+                      type="number"
+                      name="pickup"
                       placeholder="Enter pickup charge"
-                  value={bookingData.pickup}
-                  onChange={handleBookingChange}
+                      value={bookingData.pickup}
+                      onChange={handleBookingChange}
                       className="h-8 text-sm mt-1"
-                />
+                    />
                   </div>
                   <div>
                     <Label className="text-xs font-medium text-gray-600">Door Delivery</Label>
                     <Input
-                  type="number"
-                  name="doorDelivery"
+                      type="number"
+                      name="doorDelivery"
                       placeholder="Enter door delivery charge"
-                  value={bookingData.doorDelivery}
-                  onChange={handleBookingChange}
+                      value={bookingData.doorDelivery}
+                      onChange={handleBookingChange}
                       className="h-8 text-sm mt-1"
-                />
+                    />
                   </div>
                   <div>
                     <Label className="text-xs font-medium text-gray-600">Others</Label>
                     <Input
-                  type="number"
-                  name="others"
+                      type="number"
+                      name="others"
                       placeholder="Enter other charges"
-                  value={bookingData.others}
-                  onChange={handleBookingChange}
+                      value={bookingData.others}
+                      onChange={handleBookingChange}
                       className="h-8 text-sm mt-1"
-                />
+                    />
                   </div>
                   <div>
-                    <Label className="text-xs font-medium text-gray-600">Total</Label>
+                    <Label className="text-xs font-medium text-gray-600">Total (Charges Only)</Label>
                     <Input
-                  type="number"
-                  name="total"
-                      placeholder="Enter total amount"
-                  value={bookingData.total}
-                  onChange={handleBookingChange}
-                      className="h-8 text-sm mt-1 font-bold"
-                />
+                      type="number"
+                      name="total"
+                      placeholder="Auto-calculated"
+                      value={currentTotal}
+                      className="h-8 text-sm mt-1 font-bold bg-gray-100"
+                      readOnly
+                    />
                   </div>
                 </div>
               </div>

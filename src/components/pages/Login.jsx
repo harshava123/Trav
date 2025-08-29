@@ -4,11 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Truck } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
 export default function Login() {
-  const [isLogin, setIsLogin] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -18,22 +18,12 @@ export default function Login() {
 
     const form = new FormData(e.currentTarget);
     const payload = {
-      name: form.get("name") || undefined,
       email: form.get("email"),
       password: form.get("password"),
-      confirm: form.get("confirm") || undefined,
     };
 
-    if (!isLogin && payload.password !== payload.confirm) {
-      alert("Passwords do not match");
-      setIsLoading(false);
-      return;
-    }
-
     try {
-      const endpoint = isLogin ? 
-        `${API_BASE}/api/auth/login` : 
-        `${API_BASE}/api/auth/register`;
+      const endpoint = `${API_BASE}/api/auth/login`;
 
       const res = await fetch(endpoint, {
         method: "POST",
@@ -41,20 +31,19 @@ export default function Login() {
         body: JSON.stringify({
           email: payload.email,
           password: payload.password,
-          ...(isLogin ? {} : { name: payload.name })
         }),
       });
 
       if (!res.ok) {
-        const err = await res.json().catch(() => ({ message: "Auth failed" }));
-        throw new Error(err.message || "Auth failed");
+        const err = await res.json().catch(() => ({ message: "Login failed" }));
+        throw new Error(err.message || "Login failed");
       }
 
       const data = await res.json();
       localStorage.setItem("auth_token", data.token);
       localStorage.setItem("auth_user", JSON.stringify(data.user));
 
-      alert(isLogin ? "Login successful" : "Registered successfully");
+      alert("Login successful");
       
       // Check if user is admin and redirect accordingly
       if (data.user.role === "admin") {
@@ -78,35 +67,15 @@ export default function Login() {
           <Card className="bg-white border border-gray-200 shadow-sm">
             <CardHeader className="text-center pb-4">
               <CardTitle className="text-base font-semibold text-gray-800">
-                {isLogin ? "Welcome Back" : "Create Account"}
+                Welcome Back
               </CardTitle>
               <CardDescription className="text-xs text-gray-500">
-                {isLogin ? "Sign in to your account" : "Join us today"}
+                Sign in to your account
               </CardDescription>
             </CardHeader>
 
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
-                {!isLogin && (
-                  <div className="space-y-1">
-                    <Label htmlFor="name" className="text-xs font-medium text-gray-600">Full Name</Label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
-                        <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                        </svg>
-                      </div>
-                      <Input
-                        id="name"
-                        type="text"
-                        name="name"
-                        placeholder="Enter your full name"
-                        className="pl-8 h-8 text-sm"
-                        required
-                      />
-                    </div>
-                  </div>
-                )}
 
                 <div className="space-y-1">
                   <Label htmlFor="email" className="text-xs font-medium text-gray-600">Email Address</Label>
@@ -146,26 +115,7 @@ export default function Login() {
                   </div>
                 </div>
 
-                {!isLogin && (
-                  <div className="space-y-1">
-                    <Label htmlFor="confirm" className="text-xs font-medium text-gray-600">Confirm Password</Label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
-                        <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                      </div>
-                      <Input
-                        id="confirm"
-                        type="password"
-                        name="confirm"
-                        placeholder="Confirm your password"
-                        className="pl-8 h-8 text-sm"
-                        required
-                      />
-                    </div>
-                  </div>
-                )}
+
 
                 <Button
                   type="submit"
@@ -178,27 +128,15 @@ export default function Login() {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      <span className="text-xs">{isLogin ? "Signing In..." : "Creating Account..."}</span>
+                      <span className="text-xs">Signing In...</span>
                     </div>
                   ) : (
-                    <span className="text-sm">{isLogin ? "Sign In" : "Create Account"}</span>
+                    <span className="text-sm">Sign In</span>
                   )}
                 </Button>
               </form>
 
-              {/* Toggle Section */}
-              <div className="mt-6 pt-4 border-t border-gray-200">
-                <p className="text-center text-xs text-gray-500">
-                  {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
-                  <Button
-                    variant="link"
-                    onClick={() => setIsLogin(!isLogin)}
-                    className="text-blue-600 hover:text-blue-700 font-medium p-0 h-auto text-xs"
-                  >
-                    {isLogin ? "Sign up here" : "Sign in here"}
-                  </Button>
-                </p>
-              </div>
+
             </CardContent>
           </Card>
 
@@ -213,9 +151,7 @@ export default function Login() {
       <div className="w-1/2 bg-blue-600 flex items-center justify-center p-8">
         <div className="text-center text-white">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-white/20 rounded-lg mb-6">
-            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
+            <Truck className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-2xl font-bold mb-2">
             BALAJI LORRY SERVICE

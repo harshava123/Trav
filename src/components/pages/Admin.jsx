@@ -4,11 +4,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import Sidebar from "@/components/layout/Sidebar";
+import Reports from "@/components/pages/Reports";
+import { User, Users, BarChart3, FileText } from "lucide-react";
 
 export default function Admin() {
   const [agents, setAgents] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState("addAgent");
+  const [activeTab, setActiveTab] = useState("add-agent");
 
   // Form state for adding new agent
   const [newAgent, setNewAgent] = useState({
@@ -139,22 +142,28 @@ export default function Admin() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-          <p className="text-gray-600 mt-2">Manage agents and system settings</p>
-        </div>
+    <div className="min-h-screen flex bg-gray-50">
+      {/* Unified Sidebar */}
+      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} userRole="admin" />
+      
+      {/* Main Content */}
+      <div className="flex-1 p-6">
+        <div className="max-w-7xl mx-auto">
+          {/* Header */}
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+            <p className="text-gray-600 mt-2">Manage agents and system settings</p>
+          </div>
 
         {/* Navigation Tabs */}
         <div className="mb-6">
           <div className="border-b border-gray-200">
             <nav className="-mb-px flex space-x-8">
               {[
-                { id: "addAgent", label: "Add Agent", icon: "👤" },
-                { id: "manageAgents", label: "Manage Agents", icon: "👥" },
-                { id: "overview", label: "Overview", icon: "📊" }
+                { id: "add-agent", label: "Add Agent", icon: User },
+                { id: "manage-agents", label: "Manage Agents", icon: Users },
+                { id: "reports", label: "Reports", icon: FileText },
+                { id: "overview", label: "Overview", icon: BarChart3 }
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -165,7 +174,7 @@ export default function Admin() {
                       : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                   }`}
                 >
-                  <span className="mr-2">{tab.icon}</span>
+                  <tab.icon className="w-4 h-4 mr-2 inline" />
                   {tab.label}
                 </button>
               ))}
@@ -174,7 +183,7 @@ export default function Admin() {
         </div>
 
         {/* Tab Content */}
-        {activeTab === "addAgent" && (
+        {activeTab === "add-agent" && (
           <Card>
             <CardHeader>
               <CardTitle className="text-xl">Add New Agent</CardTitle>
@@ -284,7 +293,7 @@ export default function Admin() {
           </Card>
         )}
 
-        {activeTab === "manageAgents" && (
+        {activeTab === "manage-agents" && (
           <Card>
             <CardHeader>
               <CardTitle className="text-xl">Manage Agents</CardTitle>
@@ -377,6 +386,8 @@ export default function Admin() {
           </Card>
         )}
 
+        {activeTab === "reports" && <Reports />}
+
         {activeTab === "overview" && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <Card>
@@ -412,6 +423,7 @@ export default function Admin() {
             </Card>
           </div>
         )}
+        </div>
       </div>
     </div>
   );
